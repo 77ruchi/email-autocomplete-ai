@@ -1,0 +1,7 @@
+.venv/
+__pycache__/
+*.pyc
+models/fine_tuned_gpt2/
+results/
+wandb/
+*.log   
