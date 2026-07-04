@@ -18,10 +18,11 @@ def load_models(model_type):
     ngram.train(corpus)
 
     if model_type == "Fine-Tuned GPT-2":
-        gpt2 = GPT2Engine("ruchita77/fine-tuned-gpt2-email")  # <-- your HF repo
+        gpt2 = GPT2Engine("ruchita77/fine-tuned-gpt2-email")
     else:
         gpt2 = GPT2Engine("gpt2")
-   
+
+    return HybridEngine(ngram, gpt2)
 
 
 st.title("📧 AI Email Autocomplete")
@@ -140,8 +141,6 @@ with tab3:
                                 "Time (s)": round(elapsed, 2)
                             })
                     else:
-                        # Full email generation only uses GPT-2 under the hood,
-                        # so mode selection doesn't change it — run once per model type.
                         start = time.time()
                         draft = test_engine.generate_full_email(compare_text, compare_tone)
                         elapsed = time.time() - start
