@@ -39,8 +39,7 @@ class GPT2Engine:
 
     def generate_email(self, prompt, topic="", max_new_tokens=70, num_candidates=3):
         """Used for FULL EMAIL GENERATION: generates multiple candidates and
-        picks the one that best matches the topic's keywords, since a small
-        fine-tuned model can otherwise wander off-topic on any single sample."""
+        picks the most coherent, substantial one."""
         inputs = self.tokenizer(prompt, return_tensors="pt")
         input_len = inputs["input_ids"].shape[1]
 
@@ -71,23 +70,22 @@ class GPT2Engine:
         return self._pick_best_candidate(candidates, topic)
 
     def _pick_best_candidate(self, candidates, topic):
-        """Scores each candidate by how many topic keywords it contains,
-        and returns the highest-scoring one. Falls back to the first
-        candidate if none contain any topic keywords."""
+        """Prefers longer, more complete candidates over short ones that
+        just repeat topic words verbatim without adding real content.
+        Keyword overlap only breaks ties among similar-length candidates."""
+        MIN_WORDS = 8
+
+        substantial = [c for c in candidates if len(c.split()) >= MIN_WORDS]
+        pool = substantial if substantial else candidates
+
         topic_words = set(topic.lower().split())
-        if not topic_words:
-            return candidates[0]
 
-        best_candidate = candidates[0]
-        best_score = -1
-        for c in candidates:
-            candidate_words = set(c.lower().split())
-            score = len(topic_words & candidate_words)
-            if score > best_score:
-                best_score = score
-                best_candidate = c
+        def score(c):
+            word_count = len(c.split())
+            overlap = len(topic_words & set(c.lower().split())) if topic_words else 0
+            return (word_count, overlap)
 
-        return best_candidate
+        return max(pool, key=score)
 
     def _clean_continuation(self, text):
         """Trims whitespace and cuts at sentence-ending punctuation."""

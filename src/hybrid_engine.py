@@ -19,7 +19,7 @@ class HybridEngine:
 
     def generate_full_email(self, topic: str, tone="Formal"):
         prompt, forced_opening = self._build_email_prompt(topic, tone)
-        continuation = self.gpt2.generate_email(prompt, max_new_tokens=60)
+        continuation = self.gpt2.generate_email(prompt, topic=topic, max_new_tokens=60)
         return f"{forced_opening} {continuation}".strip()
 
     def _apply_tone(self, text, tone):
