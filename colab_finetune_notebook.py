@@ -1,15 +1,15 @@
-
 # Colab Notebook: GPT-2 Fine-Tuning for Email Generation
-# Replace sections 3-8 of your existing notebook with these cells.
-# Sections 1 (install), 2 (imports), 9 (save), 10 (test) stay the same.
+# Paste each section below into its own Colab cell, run in order with Shift+Enter.
+# Add this install cell first (not shown below, run it as Cell 1):
+#   !pip install transformers datasets accelerate
 
 # ============================================================
-# 🔹 3. Load Dataset — Topic/Tone/Email pairs (upload finetune_pairs.jsonl first)
+# Section: Load Dataset — Topic/Tone/Email pairs (upload finetune_pairs.jsonl first)
 # ============================================================
 import json
 from datasets import Dataset
 
-# Upload finetune_pairs.jsonl to Colab first (left sidebar -> Files -> upload)
+# Upload finetune_pairs.jsonl to Colab first (left sidebar -> folder icon -> upload icon)
 with open("finetune_pairs.jsonl") as f:
     raw_pairs = [json.loads(line) for line in f]
 
@@ -26,12 +26,12 @@ def format_example(example):
 texts = [format_example(ex) for ex in raw_pairs]
 dataset = Dataset.from_dict({"text": texts})
 
-# Optional: print one to sanity-check the format
+# Sanity-check the format
 print(dataset[0]["text"])
 
 
 # ============================================================
-# 🔹 4. Load Tokenizer & Model
+# Section: Load Tokenizer & Model
 # ============================================================
 from transformers import AutoTokenizer, AutoModelForCausalLM
 
@@ -45,7 +45,7 @@ model.config.pad_token_id = tokenizer.pad_token_id
 
 
 # ============================================================
-# 🔹 5. Tokenization
+# Section: Tokenization
 # ============================================================
 def tokenize_function(examples):
     # Append eos_token so the model learns WHERE an email ends
@@ -66,15 +66,16 @@ eval_dataset = split["test"]
 
 
 # ============================================================
-# 🔹 6. Training Setup
+# Section: Training Setup
+# NOTE: overwrite_output_dir removed — newer transformers versions
+# don't accept this argument and it's not needed (dir is overwritten by default)
 # ============================================================
 import torch
 from transformers import TrainingArguments
 
 training_args = TrainingArguments(
     output_dir="./results",
-    overwrite_output_dir=True,
-    num_train_epochs=15,          # small dataset -> needs more epochs to learn the pattern
+    num_train_epochs=25,          # increased since dataset grew to ~39 examples
     per_device_train_batch_size=2,
     per_device_eval_batch_size=2,
     eval_strategy="epoch",
@@ -88,7 +89,7 @@ training_args = TrainingArguments(
 
 
 # ============================================================
-# 🔹 7. Trainer
+# Section: Trainer
 # ============================================================
 from transformers import Trainer, DataCollatorForLanguageModeling
 
@@ -107,7 +108,7 @@ trainer = Trainer(
 
 
 # ============================================================
-# 🔹 8. Train Model + check perplexity before/after
+# Section: Train Model + check perplexity before/after
 # ============================================================
 import math
 
@@ -124,18 +125,28 @@ print(f"Final perplexity (after training): {math.exp(final_eval['eval_loss']):.2
 
 
 # ============================================================
-# 🔹 9. Save Model (unchanged from your original notebook)
+# Section: Save Model
 # ============================================================
 trainer.save_model("fine_tuned_gpt2")
 tokenizer.save_pretrained("fine_tuned_gpt2")
 
 
 # ============================================================
-# 🔹 10. Test Your Model — matches the app's actual prompt format
+# Section: Zip and download the model
+# ============================================================
+import shutil
+shutil.make_archive("fine_tuned_gpt2", "zip", "fine_tuned_gpt2")
+
+from google.colab import files
+files.download("fine_tuned_gpt2.zip")
+
+
+# ============================================================
+# Section: Test Your Model — matches the app's actual prompt format
 # ============================================================
 prompt = (
     "Write a professional email based on the topic and tone given.\n\n"
-    "Topic: request a laptop upgrade\n"
+    "Topic: leave approval\n"
     "Tone: Formal\n"
     "Email:"
 )
